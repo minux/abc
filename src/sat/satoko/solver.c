@@ -114,7 +114,7 @@ static inline void clause_bin_resolution(solver_t *s, vec_uint_t *clause_lits)
 		vec_uint_assign(s->stamps, lit2var(lit), s->cur_stamp);
 
 	counter = 0;
-	watch_list_foreach(s->bin_watches, w, neg_lit) {
+	watch_list_foreach_bin(s->watches, w, neg_lit) {
 		unsigned imp_lit = w->blocker;
 		if (vec_uint_at(s->stamps, lit2var(imp_lit)) == s->cur_stamp &&
 		    lit_value(s, imp_lit) == LIT_TRUE) {
@@ -191,17 +191,17 @@ static inline unsigned solver_decide(solver_t *s)
 			next_var = UNDEF;
 			return UNDEF;
 		}
-        next_var = heap_remove_min(s->var_order);
-        if (solver_has_marks(s) && !var_mark(s, next_var))
-            next_var = UNDEF;
+		next_var = heap_remove_min(s->var_order);
+		if (solver_has_marks(s) && !var_mark(s, next_var))
+			next_var = UNDEF;
 	}
 	return var2lit(next_var, vec_char_at(s->polarity, next_var));
 }
 
 static inline void solver_new_decision(solver_t *s, unsigned lit)
 {
-    if (solver_has_marks(s) && !var_mark(s, lit2var(lit)))
-        return;
+	if (solver_has_marks(s) && !var_mark(s, lit2var(lit)))
+		return;
 	assert(var_value(s, lit2var(lit)) == VAR_UNASSING);
 	vec_uint_push_back(s->trail_lim, vec_uint_size(s->trail));
 	solver_enqueue(s, lit, UNDEF);
@@ -399,9 +399,7 @@ static inline void solver_garbage_collect(solver_t *s)
 	for (i = 0; i < 2 * vec_char_size(s->assigns); i++) {
 		struct watcher *w;
 		watch_list_foreach(s->watches, w, i)
-		    clause_realloc(new_cdb, s->all_clauses, &(w->cref));
-		watch_list_foreach(s->bin_watches, w, i)
-		    clause_realloc(new_cdb, s->all_clauses, &(w->cref));
+			clause_realloc(new_cdb, s->all_clauses, &(w->cref));
 	}
 
 	for (i = 0; i < vec_uint_size(s->trail); i++)
@@ -541,9 +539,9 @@ unsigned solver_propagate(solver_t *s)
 		struct watcher *i, *j;
 
 		n_propagations++;
-		watch_list_foreach(s->bin_watches, i, p) {
-            if (solver_has_marks(s) && !var_mark(s, lit2var(i->blocker)))
-                continue;
+		watch_list_foreach_bin(s->watches, i, p) {
+			if (solver_has_marks(s) && !var_mark(s, lit2var(i->blocker)))
+				continue;
 			if (var_value(s, lit2var(i->blocker)) == VAR_UNASSING)
 				solver_enqueue(s, i->blocker, i->cref);
 			else if (lit_value(s, i->blocker) == LIT_FALSE)
@@ -553,16 +551,14 @@ unsigned solver_propagate(solver_t *s)
 		ws = vec_wl_at(s->watches, p);
 		begin = watch_list_array(ws);
 		end = begin + watch_list_size(ws);
-		for (i = j = begin; i < end;) {
+		for (i = j = begin + ws->n_bin; i < end;) {
 			struct clause *clause;
 			struct watcher w;
 
-            if (solver_has_marks(s) && !var_mark(s, lit2var(i->blocker)))
-            {
+			if (solver_has_marks(s) && !var_mark(s, lit2var(i->blocker))) {
 				*j++ = *i++;
-                continue;
-            }
-
+				continue;
+			}
 			if (lit_value(s, i->blocker) == LIT_TRUE) {
 				*j++ = *i++;
 				continue;
@@ -590,7 +586,7 @@ unsigned solver_propagate(solver_t *s)
 					if (lit_value(s, lits[k]) != LIT_FALSE) {
 						lits[1] = lits[k];
 						lits[k] = neg_lit;
-						watch_list_push(vec_wl_at(s->watches, lit_neg(lits[1])), w);
+						watch_list_push(vec_wl_at(s->watches, lit_neg(lits[1])), w, 0);
 						goto next;
 					}
 				}
