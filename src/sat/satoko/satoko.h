@@ -75,7 +75,8 @@ struct satoko_stats {
 	unsigned n_reduce_db;
 
 	long n_decisions;
-	long n_propagations;
+    long n_propagations;
+    long n_propagations_all;
 	long n_inspects;
 	long n_conflicts;
 	long n_conflicts_all;
